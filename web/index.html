@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>پنل تونل — Tunnel Panel</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<div class="bg-glow"><i></i><i></i><i></i></div>
+
+<!-- ===== لاگین ===== -->
+<div id="loginView" class="login-wrap">
+  <div class="login-shell">
+    <div class="login-side">
+      <div class="logo-mark big"><svg viewBox="0 0 24 24"><path d="M12 2 L22 12 L12 22 L2 12 Z"/></svg></div>
+      <h1>پنل تونل</h1>
+      <p>سرورهات رو به هم وصل کن، تونل بساز و ترافیکشون رو زنده ببین — همه از یک صفحه.</p>
+      <ul class="feat">
+        <li><span>◆</span> تونل مستقیم TCP و UDP</li>
+        <li><span>◆</span> تونل معکوس برای سرورهای پشت NAT</li>
+        <li><span>◆</span> نصب هر سرور با یک دستور</li>
+        <li><span>◆</span> مانیتورینگ زنده ترافیک</li>
+      </ul>
+    </div>
+    <form id="loginForm" class="login-form">
+      <h2>خوش برگشتی 👋</h2>
+      <p class="muted">برای ادامه وارد شو</p>
+      <label>نام کاربری
+        <div class="field"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 5-5.5 8-5.5s6.5 1.5 8 5.5"/></svg><input id="loginUser" required autocomplete="username" placeholder="admin"></div>
+      </label>
+      <label>رمز عبور
+        <div class="field"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg><input id="loginPass" type="password" required autocomplete="current-password" placeholder="••••••••"></div>
+      </label>
+      <button class="btn primary w100 big-btn" type="submit">ورود به پنل ←</button>
+      <p id="loginError" class="error"></p>
+      <p class="muted small center">رمز ادمین هنگام نصب روی سرور نمایش داده شده است.</p>
+    </form>
+  </div>
+</div>
+
+<!-- ===== برنامه اصلی ===== -->
+<div id="appView" class="layout hidden">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="logo-mark"><svg viewBox="0 0 24 24"><path d="M12 2 L22 12 L12 22 L2 12 Z"/></svg></div>
+      <div><b>پنل تونل</b><small>TUNNEL PANEL</small></div>
+    </div>
+    <nav id="mainNav">
+      <button data-tab="dashboard" class="navbtn active"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="8" height="8" rx="2"/><rect x="13" y="3" width="8" height="5" rx="2"/><rect x="13" y="10" width="8" height="11" rx="2"/><rect x="3" y="13" width="8" height="8" rx="2"/></svg>داشبورد</button>
+      <button data-tab="nodes" class="navbtn"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="7" rx="2"/><rect x="3" y="13" width="18" height="7" rx="2"/><path d="M7 7.5h.01M7 16.5h.01"/></svg>سرورها</button>
+      <button data-tab="tunnels" class="navbtn"><svg viewBox="0 0 24 24"><path d="M4 7h11a4 4 0 0 1 0 8H9"/><path d="M9 11l-4 4 4 4"/><path d="M15 3l4 4-4 4" transform="translate(0,2)"/></svg>تونل‌ها</button>
+      <button data-tab="users" class="navbtn admin-only"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c1-3.5 3.8-5 6.5-5s5.5 1.5 6.5 5"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M17.5 15.3c2 .6 3.4 2 4 4.7"/></svg>کاربران</button>
+      <button data-tab="update" class="navbtn admin-only"><svg viewBox="0 0 24 24"><path d="M12 3v10"/><path d="M7 8l5 5 5-5"/><path d="M4 21h16"/></svg>آپدیت سیستم</button>
+      <button data-tab="help" class="navbtn"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.3A2.6 2.6 0 1 1 12 12.5V14"/><path d="M12 17.5h.01"/></svg>راهنما</button>
+    </nav>
+    <div class="side-foot">
+      <div class="user-chip"><div class="avatar" id="avatarLetter">ا</div><div class="grow"><b id="whoami">—</b><small id="whoRole">—</small></div></div>
+      <button id="logoutBtn" class="btn ghost danger w100">خروج از حساب</button>
+    </div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <div>
+        <h2 id="pageTitle">داشبورد</h2>
+        <p id="pageSubtitle" class="muted">نمای کلی سرورها و تونل‌ها</p>
+      </div>
+      <div class="top-actions">
+        <button id="themeBtn" class="btn ghost" onclick="toggleTheme()" title="تم شب / سپیده‌دم">🌙 تم</button>
+        <button class="btn ghost" onclick="openPalette()" title="جستجوی سریع">🔎 <span class="kbd">Ctrl K</span></button>
+        <span class="live-pill"><i class="pulse-dot"></i> به‌روزرسانی زنده</span>
+        <button class="btn ghost" onclick="refreshAll(true)">↻ تازه‌سازی</button>
+      </div>
+    </header>
+
+    <!-- داشبورد -->
+    <section id="tab-dashboard" class="tab active">
+      <div class="cards">
+        <div class="stat-card teal"><div class="stat-ic"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="7" rx="2"/><rect x="3" y="13" width="18" height="7" rx="2"/><path d="M7 7.5h.01M7 16.5h.01"/></svg></div><div class="grow"><span>سرورها · آنلاین/کل</span><b id="stNodes">—</b><div class="ratio"><i id="nodesRatio"></i></div></div></div>
+        <div class="stat-card aqua"><div class="stat-ic"><svg viewBox="0 0 24 24"><path d="M4 7h11a4 4 0 0 1 0 8H9"/><path d="M9 11l-4 4 4 4"/></svg></div><div class="grow"><span>تونل‌های فعال</span><b id="stTunnels">—</b><div class="ratio"><i id="tunRatio"></i></div></div></div>
+        <div class="stat-card green"><div class="stat-ic"><svg viewBox="0 0 24 24"><path d="M12 3v12"/><path d="M6 10l6 6 6-6"/><path d="M4 21h16"/></svg></div><div><span>ترافیک ورودی</span><b id="stIn">—</b></div></div>
+        <div class="stat-card purple"><div class="stat-ic"><svg viewBox="0 0 24 24"><path d="M12 21V9"/><path d="M6 14l6-6 6 6"/><path d="M4 3h16"/></svg></div><div><span>ترافیک خروجی</span><b id="stOut">—</b></div></div>
+        <div class="stat-card sand"><div class="stat-ic"><svg viewBox="0 0 24 24"><path d="M8 12h8"/><circle cx="5" cy="12" r="2.4"/><circle cx="19" cy="12" r="2.4"/></svg></div><div><span>مجموع کانکشن‌ها</span><b id="stConn">—</b></div></div>
+      </div>
+
+      <div class="card chart-card">
+        <div class="card-head"><div><h3>ترافیک شبکه</h3><p class="muted small">۲۴ ساعت اخیر، به تفکیک ساعت</p></div><div class="legend"><span><i class="lg in"></i>ورودی</span><span><i class="lg out"></i>خروجی</span></div></div>
+        <canvas id="chart" height="150"></canvas>
+        <div id="chartEmpty" class="empty-mini">هنوز ترافیکی ثبت نشده — به محض عبور اولین داده‌ها از تونل، نمودار اینجا جان می‌گیرد. 📈</div>
+      </div>
+
+      <div class="card map-card">
+        <div class="card-head"><div><h3>🗺️ نقشه شبکه</h3><p class="muted small">سرورها چاه‌اند و تونل‌ها کانال. برای باز کردن هرکدام رویش کلیک کنید.</p></div>
+        <div class="legend"><span><i class="dot on"></i> در حال کار</span><span><i class="dot off"></i> قطع</span><span><i class="dot warn-dot"></i> خاموش</span></div></div>
+        <div id="networkMap" class="network-map"></div>
+      </div>
+
+      <div class="grid2">
+        <div class="card">
+          <div class="card-head"><h3>⚠️ نیازمند توجه</h3></div>
+          <div id="attentionBox" class="mini-list"></div>
+        </div>
+        <div class="card">
+          <div class="card-head"><h3>🔀 آخرین تونل‌ها</h3><button class="btn sm primary" onclick="gotoTab('tunnels')">ساخت تونل</button></div>
+          <div id="dashTunnels" class="mini-list"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- سرورها -->
+    <section id="tab-nodes" class="tab">
+      <div class="toolbar">
+        <div class="search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><input id="nodeSearch" placeholder="جستجوی سرور..." oninput="renderNodes()"></div>
+        <span id="nodeCount" class="muted small"></span><span class="grow"></span>
+        <button class="btn primary" onclick="openNodeModal()">＋ افزودن سرور</button>
+      </div>
+      <div id="nodesGrid" class="node-grid"></div>
+    </section>
+
+    <!-- تونل‌ها -->
+    <section id="tab-tunnels" class="tab">
+      <div class="toolbar">
+        <div class="search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><input id="tunnelSearch" placeholder="جستجوی تونل..." oninput="renderTunnels()"></div>
+        <span id="tunnelCount" class="muted small"></span><span class="grow"></span>
+        <button class="btn primary" onclick="openTunnelModal()">＋ ساخت تونل</button>
+      </div>
+      <div class="chips" id="tunnelChips">
+        <button class="chip active" data-f="all" onclick="setTunnelFilter('all')">همه</button>
+        <button class="chip" data-f="active" onclick="setTunnelFilter('active')">در حال کار</button>
+        <button class="chip" data-f="off" onclick="setTunnelFilter('off')">خاموش</button>
+        <button class="chip" data-f="problem" onclick="setTunnelFilter('problem')">قطع / منقضی</button>
+      </div>
+      <div id="tunnelsGrid" class="tunnel-grid"></div>
+    </section>
+
+    <!-- کاربران -->
+    <section id="tab-users" class="tab">
+      <div class="toolbar"><span class="grow"></span><button class="btn primary" onclick="openUserModal()">＋ کاربر جدید</button></div>
+      <div class="card tablewrap"><table>
+        <thead><tr><th>کاربر</th><th>نقش</th><th>وضعیت</th><th>عملیات</th></tr></thead>
+        <tbody id="usersBody"></tbody>
+      </table></div>
+    </section>
+
+    <!-- آپدیت سیستم -->
+    <section id="tab-update" class="tab">
+      <div class="card update-hero">
+        <div class="update-badge">🚀</div>
+        <div class="grow">
+          <h3>نسخه فعلی پنل: <b class="ltr" id="curVersion">—</b></h3>
+          <p class="muted" id="updStatus">برای دیدن نسخه تازه، «بررسی آپدیت» را بزن.</p>
+          <p class="muted small" id="updNotes"></p>
+        </div>
+      </div>
+      <div class="card">
+        <h3>آپدیت پنل</h3>
+        <p class="help-p">با یک کلیک، باینری تازه از گیت‌هاب دانلود، بررسی و جایگزین می‌شود و پنل خودش ری‌استارت می‌کند. <b>سرورها، تونل‌ها، کاربران و آمار پاک نمی‌شوند.</b> ایجنت‌های قدیمی‌تر هم بعد از آپدیت پنل، خودکار از خود پنل آپدیت می‌شوند و نیازی نیست روی تک‌تک سرورها کاری بکنی.</p>
+        <div class="row">
+          <button class="btn" id="checkUpdBtn" onclick="checkUpdate(true)">🔎 بررسی آپدیت</button>
+          <button class="btn primary" id="doUpdBtn" onclick="doUpdate()">⬇️ آپدیت پنل به نسخه تازه</button>
+          <button class="btn ghost" onclick="doUpdate(true)">نصب مجدد همین نسخه</button>
+        </div>
+        <p class="muted small" id="updHint"></p>
+      </div>
+      <div class="card">
+        <div class="card-head"><h3>ایجنت‌های سرورها</h3><button class="btn sm" onclick="loadAgentVersions()">↻ تازه‌سازی</button></div>
+        <div id="agentVersions" class="mini-list"></div>
+        <p class="muted small">ایجنت‌ها وقتی نسخه پنل از نسخه آن‌ها تازه‌تر باشد، ظرف یک دقیقه خودکار آپدیت می‌شوند. اگر ایجنتی آفلاین باشد، با اولین اتصالش آپدیت را می‌گیرد.</p>
+      </div>
+    </section>
+
+    <!-- راهنما -->
+    <section id="tab-help" class="tab">
+      <div class="card help-card">
+        <h3>🚀 شروع سریع در سه قدم</h3>
+        <div class="steps">
+          <div class="step"><b>۱</b><div><h4>سرور اضافه کن</h4><p>از تب «سرورها» سرور بساز؛ پنل یک دستور نصب تک‌خطی می‌دهد. همان را روی سرور اجرا کن تا آنلاین شود.</p></div></div>
+          <div class="step"><b>۲</b><div><h4>تونل بساز</h4><p><b>Forward:</b> فوروارد مستقیم یک پورت به مقصد (TCP/UDP).<br><b>Reverse:</b> سرور مقصد اگر پشت NAT است، ترافیک از سرور عمومی به او می‌رسد (مثل FRP).</p></div></div>
+          <div class="step"><b>۳</b><div><h4>لذت ببر 🎉</h4><p>ترافیک و کانکشن‌های هر تونل را زنده در داشبورد ببین؛ هر وقت خواستی تونل را متوقف، ویرایش یا محدود کن.</p></div></div>
+        </div>
+        <h3>🔌 پورت‌های لازم در فایروال</h3>
+        <ul class="nice">
+          <li>پورت پنل (پیش‌فرض <code>8080</code>) روی سرور پنل</li>
+          <li>پورت <b>Relay</b> (پیش‌فرض <code>10000</code>) روی سرور عمومی — برای اتصال ایجنت‌های مقصد</li>
+          <li>پورت ورودی هر تونل، روی سرور مبدا‌ی آن تونل</li>
+        </ul>
+        <h3>💡 مثال: SSH به سرور خانگی بدون IP عمومی</h3>
+        <p>تونل Reverse بساز: سرور مبدا = سرور عمومی، پورت ورودی = <code>2222</code>، سرور مقصد = سرور خانگی، مقصد = <code>127.0.0.1:22</code><br>بعد: <code class="ltr">ssh -p 2222 user@PUBLIC_IP</code></p>
+      </div>
+    </section>
+  </main>
+</div>
+
+<!-- ===== مودال سرور ===== -->
+<div id="nodeModal" class="modal hidden"><div class="modal-card">
+  <button class="x" onclick="closeModal('nodeModal')">✕</button>
+  <div class="modal-ic teal-bg">🖥️</div>
+  <h3 id="nodeModalTitle">افزودن سرور</h3>
+  <p class="muted small">یک اسم و آدرس عمومی سرور را وارد کن؛ دستور نصب را می‌گیری.</p>
+  <form id="nodeForm">
+    <input type="hidden" id="nodeId">
+    <label>نام سرور *<input id="nodeName" required placeholder="مثلاً: سرور آلمان 🇩🇪"></label>
+    <label>آدرس عمومی (IP یا دامنه)<input id="nodeHost" class="ltr" placeholder="203.0.113.10"></label>
+    <label>توضیح (اختیاری)<input id="nodeDesc" placeholder="مثلاً: سرور اصلی فروشگاه"></label>
+    <div id="installBox" class="install-box hidden">
+      <b>✨ سرور را با یکی از این روش‌ها وصل کن:</b>
+      <label style="margin-top:10px">آدرس عمومی پنل (اگر با دامنه یا IP دیگری بازش می‌کنی، همان را بنویس)
+        <input id="panelAddr" class="ltr" oninput="refreshInstall()"></label>
+      <p class="method-title">روش ۱ — دستور کامل (پیشنهاد)</p>
+      <div class="cmd-row"><code id="installCmd" class="cmd"></code><button type="button" class="btn primary sm" onclick="copyInstall()">📋 کپی</button></div>
+      <p class="method-title">روش ۲ — کد اتصال (مثل کاریز)؛ روی سرور منیجر را باز کن و فقط کد را بده:</p>
+      <div class="cmd-row"><code id="joinCodeBox" class="cmd"></code><button type="button" class="btn sm" onclick="copyJoin()">📋 کپی کد</button></div>
+      <p class="muted small ltr" style="text-align:left">bash &lt;(curl -fsSL PANEL/manager.sh) agent --code CODE</p>
+      <p class="method-title">روش ۳ — دستی: روی سرور فقط <code class="ltr">tpanel-manager</code> را بزن و گزینه ۲ (اتصال ایجنت) را انتخاب کن؛ آدرس پنل و توکن را همان‌جا می‌دهی.</p>
+      <p class="muted small">چند ثانیه بعد سرور آنلاین می‌شود. دستور و کد حاوی توکن اختصاصی سرور است — مثل رمز نگهشان دار.</p>
+    </div>
+    <div class="modal-actions"><button type="button" class="btn ghost" onclick="closeModal('nodeModal')">بستن</button><button class="btn primary" type="submit">💾 ذخیره</button></div>
+  </form>
+</div></div>
+
+<!-- ===== مودال تونل ===== -->
+<!-- ===== مودال تونل (ویزارد کاریز) ===== -->
+<div id="tunnelModal" class="modal hidden"><div class="modal-card wide">
+  <button class="x" onclick="closeModal('tunnelModal')">✕</button>
+  <div class="modal-ic aqua-bg">🔀</div>
+  <h3 id="tunnelModalTitle">ساخت تونل</h3>
+  <div class="wiz-steps" id="wizSteps">
+    <span data-step="1" class="wstep active">۱ · سرورها</span>
+    <span data-step="2" class="wstep">۲ · انتقال</span>
+    <span data-step="3" class="wstep">۳ · آدرس</span>
+    <span data-step="4" class="wstep">۴ · پورت‌ها</span>
+    <span data-step="5" class="wstep">۵ · ساخت</span>
+  </div>
+
+  <!-- گام ۱: سرورها -->
+  <div class="wiz-pane" data-pane="1">
+    <label>نام تونل<input id="wName" placeholder="خودکار از روی دو سرور ساخته می‌شود" oninput="wiz.nameEdited=true"></label>
+    <label class="lbl">🟢 سرور ورودی (Entry) — کاربرها به این وصل می‌شوند</label>
+    <div class="srv-pick" id="wEntryList"></div>
+    <label class="lbl">🔵 سرور خروجی (Exit) — به سرویس واقعی می‌رسد</label>
+    <div class="srv-pick" id="wExitList"></div>
+    <p class="muted small">هر دو سرور باید مشخص باشند؛ تونل بین همین دو تا ساخته می‌شود.</p>
+  </div>
+
+  <!-- گام ۲: انتقال -->
+  <div class="wiz-pane hidden" data-pane="2">
+    <label class="lbl">جهت اتصال</label>
+    <div class="seg" id="wDirSeg">
+      <button type="button" class="seg-btn active" data-dir="reverse" onclick="wizSetDir('reverse')"><b>🔁 معکوس (Reverse)</b><small>خروجی به ورودی وصل می‌شود · پشت NAT هم کار می‌کند</small></button>
+      <button type="button" class="seg-btn" data-dir="forward" onclick="wizSetDir('forward')"><b>➡️ مستقیم (Direct)</b><small>ورودی به خروجی وصل می‌شود</small></button>
+    </div>
+    <label class="lbl">ترنسپورت لینک بین دو سرور</label>
+    <div class="trans-grid" id="wTransGrid">
+      <button type="button" class="trans-card active" data-tr="auto" onclick="wizSetTrans('auto')"><b>Auto</b><small>خودکار؛ همه مسیرها، هرکدام شد</small></button>
+      <button type="button" class="trans-card" data-tr="tcpmux" onclick="wizSetTrans('tcpmux')"><b>TCPMux</b><small>سریع؛ استریم روی کانکشن آماده</small></button>
+      <button type="button" class="trans-card" data-tr="tcp" onclick="wizSetTrans('tcp')"><b>TCP</b><small>ساده و پایدار</small></button>
+      <button type="button" class="trans-card" data-tr="ws" onclick="wizSetTrans('ws')"><b>WebSocket</b><small>عبور از پروکسی/CDN</small></button>
+      <button type="button" class="trans-card" data-tr="wss" onclick="wizSetTrans('wss')"><b>WSS</b><small>وب‌سوکت امن (TLS)</small></button>
+      <button type="button" class="trans-card" data-tr="quic" onclick="wizSetTrans('quic')"><b>QUIC</b><small>UDP سریع؛ مناسب مسیر ناپایدار</small></button>
+      <button type="button" class="trans-card" data-tr="kcp" onclick="wizSetTrans('kcp')"><b>KCP</b><small>UDP مقاوم؛ مسیر پرنویز و گیمینگ</small></button>
+    </div>
+    <label class="lbl">پروفایل</label>
+    <div class="seg" id="wProfileSeg">
+      <button type="button" class="seg-btn active" data-prof="balanced" onclick="wizSetProfile('balanced')"><b>⚖️ متعادل</b><small>برای بیشتر کارها</small></button>
+      <button type="button" class="seg-btn" data-prof="gaming" onclick="wizSetProfile('gaming')"><b>🎮 گیمینگ</b><small>تأخیر کم، کانکشن بیشتر</small></button>
+      <button type="button" class="seg-btn" data-prof="ultraspeed" onclick="wizSetProfile('ultraspeed')"><b>🚀 حداکثر سرعت</b><small>بیشترین کانکشن آماده</small></button>
+    </div>
+    <div class="linktest">
+      <button type="button" class="btn ghost" id="linkTestBtn" onclick="runLinkTest()">🔌 تست اتصال بین دو سرور</button>
+      <div id="linkTestResult"></div>
+    </div>
+  </div>
+
+  <!-- گام ۳: آدرس -->
+  <div class="wiz-pane hidden" data-pane="3">
+    <p class="muted">کاربرها با این آدرس به تونل وصل می‌شوند:</p>
+    <div class="addr-box"><b class="ltr" id="wAddrPreview">—</b>
+      <button type="button" class="icon-btn" title="کپی" onclick="copyText(document.getElementById('wAddrPreview').textContent,'آدرس کپی شد ✅')">📋</button></div>
+    <div class="kv-rows">
+      <div><span>سرور ورودی</span><b id="wAddrEntry">—</b></div>
+      <div><span>آدرس عمومی ورودی</span><b class="ltr" id="wAddrHost">—</b></div>
+      <div><span>جهت / ترنسپورت</span><b id="wAddrMode">—</b></div>
+    </div>
+    <p class="muted small">پورت اتصال کاربر در گام بعد مشخص می‌شود؛ اگر خالی بگذاری خودش یک پورت آزاد از ۳۰۸۰ به بالا انتخاب می‌کند.</p>
+  </div>
+
+  <!-- گام ۴: پورت‌ها -->
+  <div class="wiz-pane hidden" data-pane="4">
+    <div class="row">
+      <label class="grow">پروتکل
+        <select id="wProtocol"><option value="tcp">TCP</option><option value="udp">UDP</option><option value="both">TCP + UDP</option></select></label>
+      <label class="grow" id="targetHostWrap"><span id="targetHostLabel">هاست سرویس</span><input id="tTargetHost" class="ltr" value="127.0.0.1"></label>
+    </div>
+    <div id="customHostRow" class="hidden"><a class="mini-link" href="#" onclick="toggleCustomHost(event)">سرویس روی دستگاه دیگری پشت سرور خروجی است؟ (هاست سفارشی)</a></div>
+    <label>پورت‌هایی که روی ورودی باز می‌شود
+      <input id="wPorts" class="ltr" placeholder="443, 8080-8090, 2053=53" oninput="renderPortsPreview()">
+      <small class="muted">با کاما جدا کن؛ بازه با خط تیره و نگاشت با مساوی: <span class="ltr">2053=53</span> یعنی پورت ۲۰۵۳ ورودی می‌رسد به پورت ۵۳ سرویس روی خروجی. خالی = پورت خودکار.</small>
+    </label>
+    <div id="wPortsPreview" class="ports-preview"></div>
+    <div class="row">
+      <label class="grow">سقف ترافیک (GB) — خالی = نامحدود<input id="tLimit" type="number" step="0.1" min="0" placeholder="نامحدود"></label>
+      <label class="grow">انقضا (اختیاری)<input id="tExpire" type="datetime-local"></label>
+    </div>
+  </div>
+
+  <!-- گام ۵: ساخت -->
+  <div class="wiz-pane hidden" data-pane="5">
+    <p class="muted">بازبینی نهایی — اگر همه‌چیز درست است بزن «ساخت تونل»:</p>
+    <div class="kv-rows" id="wReview"></div>
+    <p class="muted small">تونل ذخیره می‌شود و هر دو ایجنت در چند ثانیه کانفیگ تازه را می‌گیرند و لینک ساخته می‌شود.</p>
+  </div>
+
+  <p class="wiz-error hidden" id="wizError"></p>
+  <div class="modal-actions wiz-nav">
+    <button type="button" class="btn ghost hidden" id="wizBack" onclick="wizNav(-1)">→ قبلی</button>
+    <span class="grow"></span>
+    <button type="button" class="btn ghost" onclick="closeModal('tunnelModal')">انصراف</button>
+    <button type="button" class="btn primary" id="wizNext" onclick="wizNav(1)">بعدی ←</button>
+    <button type="button" class="btn primary hidden" id="wizBuild" onclick="wizSubmit()">🚀 ساخت تونل</button>
+  </div>
+</div></div>
+
+<!-- ===== مودال محک لینک ===== -->
+<div id="probeModal" class="modal hidden"><div class="modal-card">
+  <button class="x" onclick="closeModal('probeModal')">✕</button>
+  <div class="modal-ic teal-bg">📡</div>
+  <h3 id="probeTitle">محک لینک</h3>
+  <div id="probeBody"><p class="muted">در حال بررسی...</p></div>
+  <div class="modal-actions"><button type="button" class="btn ghost" onclick="closeModal('probeModal')">بستن</button>
+  <button type="button" class="btn primary" id="probeRetry">🔄 محک دوباره</button></div>
+</div></div>
+
+<!-- ===== مودال کاربر ===== -->
+<div id="userModal" class="modal hidden"><div class="modal-card">
+  <button class="x" onclick="closeModal('userModal')">✕</button>
+  <div class="modal-ic purple-bg">👥</div>
+  <h3>کاربر جدید</h3>
+  <form id="userForm">
+    <label>نام کاربری *<input id="uName" required></label>
+    <label>رمز عبور *<input id="uPass" type="password" required></label>
+    <label>نقش<select id="uRole"><option value="user">کاربر عادی — فقط تونل‌های خودش</option><option value="admin">ادمین — دسترسی کامل</option></select></label>
+    <div class="modal-actions"><button type="button" class="btn ghost" onclick="closeModal('userModal')">انصراف</button><button class="btn primary" type="submit">ساخت کاربر</button></div>
+  </form>
+</div></div>
+
+<!-- ===== جستجوی سریع ===== -->
+<div id="paletteModal" class="modal hidden"><div class="modal-card palette">
+  <input id="paletteInput" placeholder="جستجوی سرور، تونل یا صفحه..." oninput="renderPalette()">
+  <div id="paletteResults" class="palette-results"></div>
+  <p class="muted small">Enter/کلیک برای رفتن · Esc برای بستن</p>
+</div></div>
+
+<div id="toast" class="toast hidden"></div>
+<script src="/static/app.js"></script>
+</body>
+</html>
